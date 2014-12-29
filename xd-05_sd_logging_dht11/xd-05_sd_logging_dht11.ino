@@ -150,93 +150,101 @@ void setup()
 void loop()
 {
   DateTime now = rtc.now();
-
+  
   // make a string for assembling the data to log:
+  String timestampString = "";
   String dataString = "";
+  String timestampPrevString = "";
+  String dataPrevString = "";
 
-    Serial.print(now.year(), DEC);
-    Serial.print('/');
-    Serial.print(now.month(), DEC);
-    Serial.print('/');
-    Serial.print(now.day(), DEC);
-    Serial.print(' ');
-    Serial.print(now.hour(), DEC);
-    Serial.print(':');
-    Serial.print(now.minute(), DEC);
-    Serial.print(':');
-    Serial.print(now.second(), DEC);
-    Serial.println();
+  File dataFile;
+  
+  while (1) {  
     
-    
-    dataString += String(now.year()) + '/' + String(now.month()) + '/' + String(now.day());
-    dataString += ' ' + String(now.hour()) + ':' + String(now.minute()) + ':' + String(now.second());
+    timestampString = String(now.year()) + '/' + String(now.month()) + '/' + String(now.day());
+    timestampString += ' ' + String(now.hour()) + ':' + String(now.minute()) + ':' + String(now.second());
    
-  Serial.println(now.unixtime());
- 
+    timestampString += ","  + String(now.unixtime()) ;
 
-  dataString += ","  + String(now.unixtime()) ;
+    int chk = DHT11.read(DHT11PIN);
 
+    switch (chk) {
+    case DHTLIB_OK: 
+      break;
+    case DHTLIB_ERROR_CHECKSUM: 
+      Serial.println("Checksum error"); 
+      break;
+    case DHTLIB_ERROR_TIMEOUT: 
+      Serial.println("Time out error"); 
+      break;
+    default: 
+      Serial.println("Unknown error"); 
+      break;
+    }
   
-  Serial.println("\n");
+    dataString = "," + String(DHT11.humidity);
+    dataString += "," + String(Fahrenheit(DHT11.temperature));
+    dataString += "," + String(Fahrenheit(dewPointFast(DHT11.temperature, DHT11.humidity)));
 
-  int chk = DHT11.read(DHT11PIN);
-
-  Serial.print("Read sensor: ");
-  switch (chk)
-  {
-  case DHTLIB_OK: 
-    Serial.println("OK"); 
-    break;
-  case DHTLIB_ERROR_CHECKSUM: 
-    Serial.println("Checksum error"); 
-    break;
-  case DHTLIB_ERROR_TIMEOUT: 
-    Serial.println("Time out error"); 
-    break;
-  default: 
-    Serial.println("Unknown error"); 
-    break;
-  }
-
-  Serial.print("Humidity (%): ");
-  Serial.println((float)DHT11.humidity, 2);
-  
-  dataString += "," + String(DHT11.humidity);
-  
-  Serial.print("Temperature (°F): ");
-  Serial.println(Fahrenheit(DHT11.temperature), 2);
-
-  dataString += "," + String(Fahrenheit(DHT11.temperature));
-
-  Serial.print("Dew PointFast (°C): ");
-  Serial.println(Fahrenheit(dewPointFast(DHT11.temperature, DHT11.humidity)));
-
-  dataString += "," + String(Fahrenheit(dewPointFast(DHT11.temperature, DHT11.humidity)));
-
-  // read three sensors and append to the string:
+// read three sensors and append to the string:
 //  for (int analogPin = 0; analogPin < 3; analogPin++) {
 //    int sensor = analogRead(analogPin);
- //   dataString += String(sensor);
+//   dataString += String(sensor);
 //    if (analogPin < 2) {
 //      dataString += ",";
 //    }
 //  }
 
-  // open the file. note that only one file can be open at a time,
-  // so you have to close this one before opening another.
-  File dataFile = SD.open("dht11.txt", FILE_WRITE);
+    if (dataString != dataPrevString) {
 
-  // if the file is available, write to it:
-  if (dataFile) {
-    dataFile.println(dataString);
-    dataFile.close();
-    // print to the serial port too:
-    Serial.println(dataString);
-  }
-  // if the file isn't open, pop up an error:
-  else {
-    Serial.println("error opening datalog.txt");
-  }
-  delay(5000);
+      Serial.print(now.year(), DEC);
+      Serial.print('/');
+      Serial.print(now.month(), DEC);
+      Serial.print('/');
+      Serial.print(now.day(), DEC);
+      Serial.print(' ');
+      Serial.print(now.hour(), DEC);
+      Serial.print(':');
+      Serial.print(now.minute(), DEC);
+      Serial.print(':');
+      Serial.print(now.second(), DEC);
+      Serial.println();
 
+      Serial.print("Humidity (%): ");
+      Serial.println((float)DHT11.humidity, 2);
+
+      Serial.print("Temperature (°F): ");
+      Serial.println(Fahrenheit(DHT11.temperature), 2);
+
+      Serial.print("Dew PointFast (°C): ");
+      Serial.println(Fahrenheit(dewPointFast(DHT11.temperature, DHT11.humidity)));
+
+      // open the file. note that only one file can be open at a time,
+      // so you have to close this one before opening another.
+      dataFile = SD.open("dht11.txt", FILE_WRITE);
+  
+      // if the file is available, write to it:
+      if (dataFile) {
+        if (dataPrevString != "") { // Print last timestamp and values
+          dataFile.println(timestampPrevString + dataPrevString);
+        }
+        // Print current values
+        dataFile.println(timestampString + dataString);
+        
+        dataFile.close();
+        // print to the serial port too:
+        Serial.println(dataString);
+      }
+      // if the file isn't open, pop up an error:
+      else {
+        Serial.println("error opening datalog.txt");
+      }
+    }
+    // Move current values to previous valuse
+    timestampPrevString = timestampString;
+    dataPrevString = dataString;
+ 
+   
+    delay(5000);
+  }
 }
