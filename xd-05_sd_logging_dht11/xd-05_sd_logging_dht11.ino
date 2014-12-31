@@ -149,7 +149,7 @@ void setup()
 
 void loop()
 {
-  DateTime now = rtc.now();
+
   
   // make a string for assembling the data to log:
   String timestampString = "";
@@ -160,11 +160,15 @@ void loop()
   File dataFile;
   
   while (1) {  
+    DateTime now = rtc.now();    
     
     timestampString = String(now.year()) + '/' + String(now.month()) + '/' + String(now.day());
     timestampString += ' ' + String(now.hour()) + ':' + String(now.minute()) + ':' + String(now.second());
    
     timestampString += ","  + String(now.unixtime()) ;
+    timestampString += ","  + String(now.year()) + ',' + String(now.month()) + ',' + String(now.day());
+    timestampString += ',' + String(now.hour()) + ',' + String(now.minute()) + ',' + String(now.second());
+
 
     int chk = DHT11.read(DHT11PIN);
 
@@ -225,15 +229,16 @@ void loop()
   
       // if the file is available, write to it:
       if (dataFile) {
-        if (dataPrevString != "") { // Print last timestamp and values
+        if (dataPrevString != "" && timestampPrevString != timestampString) { // Print last timestamp and values if the timestamp changed
           dataFile.println(timestampPrevString + dataPrevString);
+          Serial.println(timestampPrevString + dataPrevString);
         }
         // Print current values
         dataFile.println(timestampString + dataString);
         
         dataFile.close();
         // print to the serial port too:
-        Serial.println(dataString);
+        Serial.println(timestampString + dataString);
       }
       // if the file isn't open, pop up an error:
       else {
